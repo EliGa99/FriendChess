@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>FriendChess – Bullet</title>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<style>
+body { background:#222; color:white; font-family:sans-serif; text-align:center; }
+.board { display:grid; grid-template-columns:repeat(8,60px); width:480px; margin:20px auto; }
+.square { width:60px; height:60px; display:flex; align-items:center; justify-content:center;
+          font-size:34px; cursor:pointer; }
+.white { background:#eee; color:black; }
+.black { background:#555; }
+.selected { outline:3px solid red; }
+.highlight { outline:3px solid yellow; }
+
+.own { color:#00ff88; }
+.enemy { color:#ff5555; }
+
+.chat { width:480px; margin:auto; border:1px solid #555; padding:5px; }
+.chatlog { height:140px; overflow-y:auto; text-align:left; font-size:14px; }
+
+#turn { font-weight:bold; margin:10px; font-size:18px; }
+
+.clock { display:flex; justify-content:space-between; width:480px; margin:auto; font-size:20px; margin-bottom:10px; }
+.clock div { padding:5px 10px; background:#222; border:1px solid #444; }
+</style>
+</head>
+
+<body>
+<h1>⌯⁍ Bullet FriendChess</h1>
+<p id="info">Verbinde…</p>
+<p id="turn">Am Zug: …</p>
+
+<div class="clock">
+    <div id="whiteClock">02:00</div>
+    <div id="blackClock">02:00</div>
+</div>
+
+<div class="board" id="board"></div>
+
+<div class="chat">
+    <div class="chatlog" id="chatlog"></div>
+    <input id="chatinput" placeholder="Nachricht…" />
+    <button onclick="sendChat()">Senden</button>
+</div>
+
+<script>
+const socket = io();
+const boardDiv = document.getElementById("board");
+const chatlog = document.getElementById("chatlog");
+const info = document.getElementById("info");
+const turnDisplay = document.getElementById("turn");
+const whiteClockEl = document.getElementById("whiteClock");
+const blackClockEl = document.getElementById("blackClock");
+
+let selected = null;
+let state = {};
+let playerColor = null;
+let lastMove = null;
+let clocks = {white: null, black: null};
+let currentTurn = "white";
+let gameEnded = false;
+
+// 🔥 EJS statt Flask
+const room_id = "<%= room_id %>";
+
+const pieces = [
+ ["♖","♘","♗","♕","♔","♗","♘","♖"],
+ ["♙","♙","♙","♙","♙","♙","♙","♙"],
+ ["","","","","","","",""],
+ ["","","","","","","",""],
+ ["","","","","","","",""],
+ ["","","","","","","",""],
+ ["♟","♟","♟","♟","♟","♟","♟","♟"],
+ ["♜","♞","♝","♛","♚","♝","♞","♜"]
+];
+
+// ----------------- Board -----------------
+function initBoard(){
+    for(let y=0;y<8;y++)
+        for(let x=0;x<8;x++)
+            if(pieces[y][x]) state[`${x}${y}`] = pieces[y][x];
+}
+initBoard();
+
+function draw(){
+    if(gameEnded) return;
+    boardDiv.innerHTML="";
+
+    const yRange = playerColor==="black" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
+    const xRange = playerColor==="black" ? [...Array(8).keys()].reverse() : [...Array(8).keys()];
+
+    for(let y of yRange){
+        for(let x of xRange){
+            const key = `${x}${y}`;
+            const sq = document.createElement("div");
+            sq.className = "square " + ((x+y)%2 ? "black":"white");
+            if(key===selected) sq.classList.add("selected");
+            if(lastMove && (key===lastMove.from || key===lastMove.to)) sq.classList.add("highlight");
+
+            sq.textContent = state[key] || "";
+
+            if(state[key]){
+                const isWhite = "♙♖♘♗♕♔".includes(state[key]);
+                const own = (playerColor==="white" && isWhite) || (playerColor==="black" && !isWhite);
+                sq.classList.add(own ? "own" : "enemy");
+            }
+
+            sq.onclick = ()=>clickSquare(key);
+            boardDiv.appendChild(sq);
+        }
+    }
+}
+
+// ----------------- Klick -----------------
+function clickSquare(pos){
+    if(!playerColor || gameEnded) return;
+    if(selected){
+        socket.emit("move",{from:selected,to:pos,room:room_id});
+        selected=null;
+    } else if(state[pos]) selected=pos;
+    draw();
+}
+
+// ----------------- Chat -----------------
+function sendChat(){
+    const i=document.getElementById("chatinput");
+    if(i.value.trim()){
+        socket.emit("chat",{msg:i.value,room:room_id});
+        i.value="";
+    }
+}
+
+// ----------------- Timer -----------------
+function fmt(t){ return `${Math.floor(t/60).toString().padStart(2,"0")}:${(t%60).toString().padStart(2,"0")}`; }
+
+function checkTimeEnd(){
+    if(gameEnded) return;
+    if(clocks.white <= 0){
+        gameEnded = true;
+        alert("Schwarz gewinnt! Zeit von Weiß abgelaufen.");
+    }
+    if(clocks.black <= 0){
+        gameEnded = true;
+        alert("Weiß gewinnt! Zeit von Schwarz abgelaufen.");
+    }
+}
+
+setInterval(()=>{
+    if(gameEnded || !playerColor || clocks.white===null) return;
+    if(clocks[currentTurn] > 0) clocks[currentTurn]--;
+    whiteClockEl.textContent = fmt(clocks.white);
+    blackClockEl.textContent = fmt(clocks.black);
+    checkTimeEnd();
+}, 1000);
+
+// ----------------- SocketIO -----------------
+socket.emit("join",{room:room_id});
+
+socket.on("player", d=>{
+    playerColor = d.color;
+    info.textContent = "Du bist " + playerColor;
+
+    if(d.time){
+        clocks.white = d.time.white;
+        clocks.black = d.time.black;
+    } else {
+        clocks.white = 120;
+        clocks.black = 120;
+    }
+
+    currentTurn = "white"; 
+    turnDisplay.textContent = "Am Zug: " + currentTurn;
+    draw();
+});
+
+socket.on("move", d=>{
+    if(d.promotion) state[d.to] = d.promotion;
+    else { state[d.to] = state[d.from]; delete state[d.from]; }
+
+    lastMove = d.last_move;
+
+    currentTurn = d.next_turn;
+    turnDisplay.textContent = "Am Zug: " + currentTurn;
+
+    if(d.time) clocks = d.time;
+
+    draw();
+});
+
+socket.on("chat", m=>{
+    chatlog.innerHTML += m+"<br>";
+    chatlog.scrollTop = chatlog.scrollHeight;
+});
+
+socket.on("full", ()=>info.textContent="Spiel ist voll!");
+
+draw();
+</script>
+</body>
+</html>
