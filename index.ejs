@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>FriendChess – Startseite</title>
+<style>
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(140deg, #073dff, #db0eff);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    text-align: center;
+}
+h1 { font-size: 3rem; margin-bottom: 1rem; }
+h2 { margin-top: 20px; margin-bottom: 15px; }
+
+button {
+    padding: 15px 30px;
+    font-size: 1.5rem;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 8px;
+    transition: transform 0.1s, background 0.2s;
+}
+button:hover { transform: scale(1.05); background: #45a049; }
+button:active { transform: scale(0.95); }
+
+input#room {
+    padding: 15px;
+    font-size: 1.5rem;
+    width: 250px;
+    border-radius: 10px;
+    border: none;
+    text-align: center;
+    margin-bottom: 10px;
+    outline: none;
+}
+
+#qr-section {
+    margin-top: 30px;
+}
+#qr-section img { width: 200px; height: 200px; margin-bottom: 10px; }
+#game-pin { font-size: 1.3rem; font-weight: bold; color: yellow; }
+
+</style>
+</head>
+<body>
+<h1>FriendChess</h1>
+
+<h2>Neues Spiel erstellen</h2>
+<div>
+    <form action="/create/normal" method="get" style="display:inline;">
+        <button type="submit">Normal</button>
+    </form>
+    <form action="/create/bullet" method="get" style="display:inline;">
+        <button type="submit">⌯⁍ Bullet(2+0)</button>
+    </form>
+    <form action="/create/blitz" method="get" style="display:inline;">
+        <button type="submit">Blitz (5+0)</button>
+    </form>
+    <form action="/create/rapid" method="get" style="display:inline;">
+        <button type="submit">Rapid (10+0)</button>
+    </form>
+    <form action="/create/stopwatch" method="get" style="display:inline;">
+        <button type="submit">Stopwatch</button>
+    </form>
+    <form action="/create/analyse" method="get" style="display:inline;">
+        <button type="submit">Analyse</button>
+    </form>
+</div>
+
+<h2>Oder Spiel beitreten</h2>
+<form action="/game" method="get">
+    <input type="text" id="room" name="room" placeholder="Raum-ID eingeben" required>
+    <br>
+    <button type="submit">Beitreten</button>
+</form>
+
+<% if (qr_code) { %>
+<div id="qr-section">
+    <h3>Oder scanne den QR-Code:</h3>
+    <img src="<%= qr_code %>" alt="QR-Code">
+    <p id="game-pin">Spiel-PIN: <%= game_id %></p>
+</div>
+<% } %>
+
+<footer style="margin-top:50px;">&copy; 2026 made by EliXTech</footer>
+</body>
+</html>

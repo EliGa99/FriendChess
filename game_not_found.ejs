@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Spiel nicht gefunden</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    font-family: 'Press Start 2P', cursive;
+    color: white;
+    text-align: center;
+    overflow: hidden;
+}
+
+h1 {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px #fff, 0 0 20px #ff0, 0 0 30px #f0f;
+    animation: glow 1.5s infinite alternate;
+}
+
+p {
+    font-size: 1.2rem;
+    margin-bottom: 40px;
+}
+
+button {
+    padding: 20px 40px;
+    font-size: 1rem;
+    background: #00ff88;
+    color: #111;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px #00ff88;
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+#game-pin {
+    font-size: 1rem;
+    color: #ffff00;
+    margin-bottom: 30px;
+    letter-spacing: 2px;
+}
+
+@keyframes glow {
+    0% { text-shadow: 0 0 5px #fff, 0 0 10px #ff0, 0 0 15px #f0f; }
+    100% { text-shadow: 0 0 20px #fff, 0 0 30px #ff0, 0 0 40px #f0f; }
+}
+</style>
+</head>
+<body>
+
+<h1>⚠️ Spiel nicht gefunden!</h1>
+
+<!-- 🔥 EJS statt Flask -->
+<p id="game-pin">Spiel-PIN: <%= room_id %></p>
+
+<p>Der eingegebene Raum existiert leider nicht oder wurde bereits beendet.</p>
+
+<!-- 🔥 Express braucht kein url_for -->
+<form action="/">
+    <button type="submit">Zurück zur Startseite</button>
+</form>
+
+</body>
+</html>
