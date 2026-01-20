@@ -83,13 +83,12 @@ input#room {
     <button type="submit">Beitreten</button>
 </form>
 
-<% if (qr_code) { %>
-<div id="qr-section">
-    <h3>Oder scanne den QR-Code:</h3>
-    <img src="<%= qr_code %>" alt="QR-Code">
+<% if (game_id) { %>
+<div id="pin-section">
     <p id="game-pin">Spiel-PIN: <%= game_id %></p>
 </div>
 <% } %>
+
 
 <footer style="margin-top:50px;">&copy; 2026 made by EliXTech</footer>
 </body>
