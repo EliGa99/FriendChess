@@ -107,7 +107,7 @@ io.on("connection", (socket) => {
     socket.on("join", (data) => {
         const room_id = data.room;
         const game = games[room_id];
-        console.log("👤 Spieler beigetreten:", socket.id, "als", color, "in Room", room_id);
+        console.log("👤 Spieler beigetreten:", socket.id, "in Room", room_id);
         socket.join(room_id);
 
         if (!game) {
