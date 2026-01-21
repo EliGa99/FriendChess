@@ -43,6 +43,11 @@ app.get("/", (req, res) => {
     });
 });
 
+app.get("/how-it-works", (req, res) => {
+    res.render("howFriendChessWorks");
+});
+
+
 app.get("/create/:mode", (req, res) => {
     const mode = req.params.mode;
     const room_id = uuidv4().slice(0, 8);
