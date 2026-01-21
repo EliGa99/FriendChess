@@ -55,7 +55,7 @@ app.get("/create/:mode", (req, res) => {
         time: start_time ? { white: start_time, black: start_time } : null,
         last_move_time: Date.now()
     };
-
+    console.log("🟢 Room erstellt:", room_id, "Mode:", mode);
     const game_link = `${req.protocol}://${req.get("host")}/game/${room_id}`;
 
     res.render("index", {
@@ -107,7 +107,7 @@ io.on("connection", (socket) => {
     socket.on("join", (data) => {
         const room_id = data.room;
         const game = games[room_id];
-
+        console.log("👤 Spieler beigetreten:", socket.id, "als", color, "in Room", room_id);
         socket.join(room_id);
 
         if (!game) {
