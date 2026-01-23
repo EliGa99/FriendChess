@@ -80,6 +80,11 @@ button:active {
 <form action="/">
     <button type="submit">Zurück zur Startseite</button>
 </form>
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/service-worker.js");
+  }
+</script>
 
 </body>
 </html>
