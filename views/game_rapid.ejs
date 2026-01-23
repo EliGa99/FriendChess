@@ -182,5 +182,11 @@ socket.on("full",()=>info.textContent="Spiel ist voll!");
 
 draw();
 </script>
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/service-worker.js");
+  }
+</script>
+
 </body>
 </html>
