@@ -68,5 +68,11 @@
   <footer>
     <p>FriendChess – made by EliXTech</p>
   </footer>
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/service-worker.js");
+  }
+</script>
+
 </body>
 </html>
