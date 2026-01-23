@@ -93,5 +93,12 @@ input#room {
 
 
 <footer style="margin-top:50px;">&copy; 2026 made by EliXTech</footer>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/service-worker.js");
+  }
+</script>
+
 </body>
 </html>
