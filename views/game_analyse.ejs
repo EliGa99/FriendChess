@@ -52,6 +52,7 @@ function startAnalysis() {
 
 <script>
 const socket = io();
+const moveSound = new Audio("/sounds/ficha-de-ajedrez-34722.mp3");
 const boardDiv = document.getElementById("board");
 const chatlog = document.getElementById("chatlog");
 const info = document.getElementById("info");
@@ -155,6 +156,10 @@ socket.on("move",d=>{
 
     lastMove = d.last_move;
     turnDisplay.textContent = "Am Zug: " + d.next_turn;
+
+    moveSound.currentTime = 0;
+    moveSound.play();
+
 
     draw();
 });
