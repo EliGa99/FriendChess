@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -48,13 +49,14 @@ const info = document.getElementById("info");
 const turnDisplay = document.getElementById("turn");
 
 let selected = null;
-let state = {};
+let state = {};          // Keys sind jetzt UCI-Squares wie "e2"
 let playerColor = null;
 let lastMove = null;
 
 // 🔥 EJS statt Flask
 const room_id = "<%= room_id %>";
 
+// Dein ursprüngliches Layout (weiße Figuren oben)
 const pieces = [
  ["♖","♘","♗","♕","♔","♗","♘","♖"],
  ["♙","♙","♙","♙","♙","♙","♙","♙"],
@@ -66,87 +68,94 @@ const pieces = [
  ["♜","♞","♝","♛","♚","♝","♞","♜"]
 ];
 
+// Initialisiere state mit UCI-Squares (a1–h8)
 function initBoard(){
-    for(let y=0;y<8;y++)
-        for(let x=0;x<8;x++)
-            if(pieces[y][x]) state[`${x}${y}`] = pieces[y][x];
+    state = {};
+    for(let y = 0; y < 8; y++){
+        for(let x = 0; x < 8; x++){
+            const piece = pieces[y][x];
+            if(!piece) continue;
+
+            const file = String.fromCharCode("a".charCodeAt(0) + x); // a–h
+            const rank = 8 - y;                                     // y=0 → 8, y=7 → 1
+            const square = file + rank;                             // z.B. "e2"
+
+            state[square] = piece;
+        }
+    }
 }
 initBoard();
 
+// Zeichnet das Brett, rotiert je nach Spielerfarbe, aber state bleibt immer UCI-basiert
 function draw(){
-    boardDiv.innerHTML="";
+    boardDiv.innerHTML = "";
 
-    const yRange = playerColor === "black"
-        ? [0,1,2,3,4,5,6,7]
-        : [7,6,5,4,3,2,1,0];
+    const filesWhite = ["a","b","c","d","e","f","g","h"];
+    const filesBlack = [...filesWhite].reverse();
+    const ranksWhite = [8,7,6,5,4,3,2,1];
+    const ranksBlack = [...ranksWhite].reverse();
 
-    const xRange = playerColor === "black"
-        ? [7,6,5,4,3,2,1,0]
-        : [0,1,2,3,4,5,6,7];
+    const files = playerColor === "black" ? filesBlack : filesWhite;
+    const ranks = playerColor === "black" ? ranksBlack : ranksWhite;
 
-    for(let y of yRange){
-        for(let x of xRange){
-            const key = `${x}${y}`;
+    for (let r of ranks) {
+        for (let fIndex = 0; fIndex < files.length; fIndex++) {
+            const f = files[fIndex];
+            const square = f + r; // UCI-Key, z.B. "e2"
+
             const sq = document.createElement("div");
-            sq.className = "square " + ((x+y)%2 ? "black":"white");
-            if(key===selected) sq.classList.add("selected");
 
-            if(lastMove && (key===lastMove.from || key===lastMove.to)){
+            // Farbgebung nach Datei/Rank-Index (0–7)
+            const fileIndex = f.charCodeAt(0) - "a".charCodeAt(0);
+            const rankIndex = r - 1;
+            sq.className = "square " + ((fileIndex + rankIndex) % 2 ? "black" : "white");
+
+            if (square === selected) sq.classList.add("selected");
+
+            if (lastMove && (square === lastMove.from || square === lastMove.to)) {
                 sq.classList.add("highlight");
             }
 
-            sq.textContent = state[key] || "";
+            const piece = state[square] || "";
+            sq.textContent = piece;
 
-            if(state[key]){
-                const isWhite = "♙♖♘♗♕♔".includes(state[key]);
-                const own = (playerColor==="white" && isWhite) ||
-                            (playerColor==="black" && !isWhite);
+            if (piece) {
+                const isWhite = "♙♖♘♗♕♔".includes(piece);
+                const own = (playerColor === "white" && isWhite) ||
+                            (playerColor === "black" && !isWhite);
                 sq.classList.add(own ? "own" : "enemy");
             }
 
-            sq.onclick = ()=>clickSquare(key);
+            sq.onclick = () => clickSquare(square);
             boardDiv.appendChild(sq);
         }
     }
 }
 
-// Koordinaten → UCI (immer aus Brettsicht, unabhängig von Farbe)
-function convertClientPosToUCI(pos) {
-    pos = String(pos).trim();
-    if (pos.length !== 2) return null;
+// Hier werden direkt UCI-Squares (z.B. "e2") verwendet
+function clickSquare(square){
+    if (!playerColor) return;
 
-    let x = parseInt(pos[0], 10);
-    let y = parseInt(pos[1], 10);
+    if (selected) {
+        const from = selected;
+        const to = square;
 
-    if (Number.isNaN(x) || Number.isNaN(y)) return null;
-    if (x < 0 || x > 7 || y < 0 || y > 7) return null;
-
-    const file = String.fromCharCode("a".charCodeAt(0) + x);
-    const rank = (8 - y).toString(); // y=0 (oben) → 8, y=7 (unten) → 1
-
-    return file + rank;
-}
-
-function clickSquare(pos){
-    if(!playerColor) return;
-    if(selected){
-        const from = convertClientPosToUCI(selected);
-        const to = convertClientPosToUCI(pos);
-
-        if(from && to){
-            socket.emit("move",{
-                from: from,
-                to: to,
+        if (from !== to) {
+            socket.emit("move", {
+                from: from,   // z.B. "e2"
+                to: to,       // z.B. "e4"
                 room: room_id
             });
         }
-        selected=null;
-    } else if(state[pos]) selected=pos;
+        selected = null;
+    } else if (state[square]) {
+        selected = square;
+    }
     draw();
 }
 
 function sendChat(){
-    const i=document.getElementById("chatinput");
+    const i = document.getElementById("chatinput");
     if(i.value.trim()){
         socket.emit("chat",{msg:i.value,room:room_id});
         i.value="";
@@ -155,21 +164,22 @@ function sendChat(){
 
 socket.emit("join",{room:room_id});
 
-socket.on("player",d=>{
-    playerColor=d.color;
-    info.textContent="Du bist "+playerColor;
+socket.on("player", d => {
+    playerColor = d.color;
+    info.textContent = "Du bist " + playerColor;
     draw();
 });
 
-socket.on("move",d=>{
-    if(d.promotion){
+socket.on("move", d => {
+    // d.from und d.to sind UCI-Squares, z.B. "e2", "e4"
+    if (d.promotion) {
         state[d.to] = d.promotion;
     } else {
         state[d.to] = state[d.from];
     }
     delete state[d.from];
 
-    lastMove = d.last_move;
+    lastMove = d.last_move; // sollte ebenfalls {from:"e2", to:"e4"} im UCI-Format sein
     turnDisplay.textContent = "Am Zug: " + d.next_turn;
 
     moveSound.currentTime = 0;
@@ -178,16 +188,15 @@ socket.on("move",d=>{
     draw();
 });
 
-socket.on("chat",m=>{
-    chatlog.innerHTML+=m+"<br>";
-    chatlog.scrollTop=chatlog.scrollHeight;
+socket.on("chat", m => {
+    chatlog.innerHTML += m + "<br>";
+    chatlog.scrollTop = chatlog.scrollHeight;
 });
 
-socket.on("full",()=>info.textContent="Spiel ist voll!");
+socket.on("full", () => info.textContent = "Spiel ist voll!");
 
 draw();
 </script>
-
 <script>
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/service-worker.js");
