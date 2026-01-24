@@ -61,11 +61,9 @@ let selected = null;
 let state = {};
 let playerColor = null;
 let lastMove = null;
-let clocks = {white: null, black: null};
-let currentTurn = "white";
+let clocks = {white: 120, black: 120};
 let gameEnded = false;
 
-// 🔥 EJS statt Flask
 const room_id = "<%= room_id %>";
 
 const pieces = [
@@ -81,9 +79,19 @@ const pieces = [
 
 // ----------------- Board -----------------
 function initBoard(){
-    for(let y=0;y<8;y++)
-        for(let x=0;x<8;x++)
-            if(pieces[y][x]) state[`${x}${y}`] = pieces[y][x];
+    state = {};
+    for(let y=0;y<8;y++){
+        for(let x=0;x<8;x++){
+            const piece = pieces[y][x];
+            if(!piece) continue;
+
+            const file = String.fromCharCode("a".charCodeAt(0) + x);
+            const rank = 8 - y;
+            const square = file + rank;
+
+            state[square] = piece;
+        }
+    }
 }
 initBoard();
 
@@ -91,61 +99,60 @@ function draw(){
     if(gameEnded) return;
     boardDiv.innerHTML="";
 
-    const yRange = playerColor==="black" ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
-    const xRange = playerColor==="black" ? [...Array(8).keys()].reverse() : [...Array(8).keys()];
+    const filesWhite = ["a","b","c","d","e","f","g","h"];
+    const filesBlack = [...filesWhite].reverse();
+    const ranksWhite = [8,7,6,5,4,3,2,1];
+    const ranksBlack = [...ranksWhite].reverse();
 
-    for(let y of yRange){
-        for(let x of xRange){
-            const key = `${x}${y}`;
+    const files = playerColor === "black" ? filesBlack : filesWhite;
+    const ranks = playerColor === "black" ? ranksBlack : ranksWhite;
+
+    for (let r of ranks) {
+        for (let fIndex = 0; fIndex < files.length; fIndex++) {
+            const f = files[fIndex];
+            const square = f + r;
+
             const sq = document.createElement("div");
-            sq.className = "square " + ((x+y)%2 ? "black":"white");
-            if(key===selected) sq.classList.add("selected");
-            if(lastMove && (key===lastMove.from || key===lastMove.to)) sq.classList.add("highlight");
+            const fileIndex = f.charCodeAt(0) - "a".charCodeAt(0);
+            const rankIndex = r - 1;
 
-            sq.textContent = state[key] || "";
+            sq.className = "square " + ((fileIndex + rankIndex) % 2 ? "black" : "white");
 
-            if(state[key]){
-                const isWhite = "♙♖♘♗♕♔".includes(state[key]);
-                const own = (playerColor==="white" && isWhite) || (playerColor==="black" && !isWhite);
+            if (square === selected) sq.classList.add("selected");
+            if (lastMove && (square === lastMove.from || square === lastMove.to)) {
+                sq.classList.add("highlight");
+            }
+
+            const piece = state[square] || "";
+            sq.textContent = piece;
+
+            if (piece) {
+                const isWhite = "♙♖♘♗♕♔".includes(piece);
+                const own = (playerColor === "white" && isWhite) ||
+                            (playerColor === "black" && !isWhite);
                 sq.classList.add(own ? "own" : "enemy");
             }
 
-            sq.onclick = ()=>clickSquare(key);
+            sq.onclick = () => clickSquare(square);
             boardDiv.appendChild(sq);
         }
     }
 }
 
-// ----------------- Koordinaten-FIX -----------------
-function convertClientPosToUCI(pos) {
-    let x = parseInt(pos[0]);
-    let y = parseInt(pos[1]);
-
-    // Y spiegeln, damit es zu draw() passt
-    y = 7 - y;
-
-    // Nur bei Schwarz X spiegeln (Board ist ja schon gedreht)
-    if (playerColor === "black") {
-        x = 7 - x;
-    }
-
-    const file = String.fromCharCode("a".charCodeAt(0) + x);
-    const rank = (y + 1).toString();
-
-    return file + rank;
-}
-
 // ----------------- Klick -----------------
-function clickSquare(pos){
+function clickSquare(square){
     if(!playerColor || gameEnded) return;
+
     if(selected){
         socket.emit("move",{
-            from: convertClientPosToUCI(selected),
-            to: convertClientPosToUCI(pos),
+            from: selected,
+            to: square,
             room: room_id
         });
         selected=null;
-    } else if(state[pos]) selected=pos;
+    } else if(state[square]) {
+        selected=square;
+    }
     draw();
 }
 
@@ -174,8 +181,11 @@ function checkTimeEnd(){
 }
 
 setInterval(()=>{
-    if(gameEnded || !playerColor || clocks.white===null) return;
-    if(clocks[currentTurn] > 0) clocks[currentTurn]--;
+    if(gameEnded || !playerColor) return;
+
+    // Spielerzug wird serverseitig bestimmt
+    const turn = turnDisplay.textContent.includes("white") ? "white" : "black";
+    if(clocks[turn] > 0) clocks[turn]--;
     whiteClockEl.textContent = fmt(clocks.white);
     blackClockEl.textContent = fmt(clocks.black);
     checkTimeEnd();
@@ -196,8 +206,7 @@ socket.on("player", d=>{
         clocks.black = 120;
     }
 
-    currentTurn = "white"; 
-    turnDisplay.textContent = "Am Zug: " + currentTurn;
+    turnDisplay.textContent = "Am Zug: white";
     draw();
 });
 
@@ -206,9 +215,7 @@ socket.on("move", d=>{
     else { state[d.to] = state[d.from]; delete state[d.from]; }
 
     lastMove = d.last_move;
-
-    currentTurn = d.next_turn;
-    turnDisplay.textContent = "Am Zug: " + currentTurn;
+    turnDisplay.textContent = "Am Zug: " + d.next_turn;
 
     if(d.time) clocks = d.time;
 
@@ -235,4 +242,3 @@ draw();
 
 </body>
 </html>
-
