@@ -121,9 +121,12 @@ function convertClientPosToUCI(pos) {
     let x = parseInt(pos[0]);
     let y = parseInt(pos[1]);
 
+    // Y spiegeln, damit es zu draw() passt
+    y = 7 - y;
+
+    // Nur bei Schwarz X spiegeln (Board ist ja schon gedreht)
     if (playerColor === "black") {
         x = 7 - x;
-        y = 7 - y;
     }
 
     const file = String.fromCharCode("a".charCodeAt(0) + x);
