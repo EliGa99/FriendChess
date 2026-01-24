@@ -154,17 +154,7 @@ function sendChat(){
 
 function fmt(t){ return `${Math.floor(t/60).toString().padStart(2,"0")}:${(t%60).toString().padStart(2,"0")}`; }
 
-function checkTimeEnd(){
-    if(gameEnded) return;
-    if(clocks.white <=0){
-        gameEnded = true;
-        alert("Schwarz gewinnt! Zeit von Weiß abgelaufen.");
-    }
-    if(clocks.black <=0){
-        gameEnded = true;
-        alert("Weiß gewinnt! Zeit von Schwarz abgelaufen.");
-    }
-}
+
 
 setInterval(()=>{
     if(!playerColor || gameEnded) return;
