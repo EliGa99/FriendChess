@@ -41,6 +41,16 @@ body { background:#222; color:white; font-family:sans-serif; text-align:center; 
 
 <div class="board" id="board"></div>
 
+<div class="controls">
+    <button onclick="startAnalysis()">Analyse starten</button>
+</div>
+
+<script>
+function startAnalysis() {
+    window.location.href = `/analyse/<%= room_id %>`;
+}
+</script>
+
 <div class="chat">
     <div class="chatlog" id="chatlog"></div>
     <input id="chatinput" placeholder="Nachricht…" />
@@ -58,12 +68,11 @@ const whiteClockEl = document.getElementById("whiteClock");
 const blackClockEl = document.getElementById("blackClock");
 
 let selected = null;
-let state = {};
+let state = {};          // UCI
 let playerColor = null;
 let lastMove = null;
-let clocks = {white:0, black:0};
+let clocks = {white:300, black:300};
 let gameEnded = false;
-let currentTurn = "white"; // WICHTIG: aktuelle Zugfarbe
 
 const room_id = "<%= room_id %>";
 
@@ -78,7 +87,6 @@ const pieces = [
  ["♜","♞","♝","♛","♚","♝","♞","♜"]
 ];
 
-// ✅ Init Board in UCI (a1..h8)
 function initBoard(){
     state = {};
     for(let y=0;y<8;y++){
@@ -89,42 +97,45 @@ function initBoard(){
             const file = String.fromCharCode("a".charCodeAt(0) + x);
             const rank = 8 - y;
             const square = file + rank;
+
             state[square] = piece;
         }
     }
 }
 initBoard();
 
-// ✅ draw wie im richtigen Code (mit Rotation)
 function draw(){
     if(gameEnded) return;
-    boardDiv.innerHTML="";
+    boardDiv.innerHTML = "";
 
     const filesWhite = ["a","b","c","d","e","f","g","h"];
+    const filesBlack = [...filesWhite].reverse();
     const ranksWhite = [8,7,6,5,4,3,2,1];
+    const ranksBlack = [...ranksWhite].reverse();
 
-    const files = playerColor === "black" ? [...filesWhite].reverse() : filesWhite;
-    const ranks = playerColor === "black" ? [...ranksWhite].reverse() : ranksWhite;
+    const files = playerColor === "black" ? filesBlack : filesWhite;
+    const ranks = playerColor === "black" ? ranksBlack : ranksWhite;
 
     for (let r of ranks) {
-        for (let f of files) {
+        for (let fIndex = 0; fIndex < files.length; fIndex++) {
+            const f = files[fIndex];
             const square = f + r;
-            const sq = document.createElement("div");
 
+            const sq = document.createElement("div");
             const fileIndex = f.charCodeAt(0) - "a".charCodeAt(0);
             const rankIndex = r - 1;
 
-            sq.className = "square " + ((fileIndex + rankIndex) % 2 ? "black":"white");
+            sq.className = "square " + ((fileIndex + rankIndex) % 2 ? "black" : "white");
 
-            if(square === selected) sq.classList.add("selected");
-            if(lastMove && (square === lastMove.from || square === lastMove.to)){
+            if (square === selected) sq.classList.add("selected");
+            if (lastMove && (square === lastMove.from || square === lastMove.to)) {
                 sq.classList.add("highlight");
             }
 
             const piece = state[square] || "";
             sq.textContent = piece;
 
-            if(piece){
+            if (piece) {
                 const isWhite = "♙♖♘♗♕♔".includes(piece);
                 const own = (playerColor === "white" && isWhite) ||
                             (playerColor === "black" && !isWhite);
@@ -138,23 +149,23 @@ function draw(){
 }
 
 function clickSquare(square){
-    if(!playerColor || gameEnded) return;
+    if (!playerColor || gameEnded) return;
 
-    if(selected){
+    if (selected) {
         socket.emit("move", {
             from: selected,
             to: square,
             room: room_id
         });
         selected = null;
-    } else if(state[square]){
+    } else if (state[square]) {
         selected = square;
     }
     draw();
 }
 
 function sendChat(){
-    const i=document.getElementById("chatinput");
+    const i = document.getElementById("chatinput");
     if(i.value.trim()){
         socket.emit("chat",{msg:i.value,room:room_id});
         i.value="";
@@ -177,9 +188,8 @@ function checkTimeEnd(){
 
 setInterval(()=>{
     if(!playerColor || gameEnded) return;
-
-    // aktuelle Zugfarbe nutzen (vom Server gesetzt)
-    if(clocks[currentTurn] > 0) clocks[currentTurn]--;
+    const turn = turnDisplay.textContent.includes("white") ? "white" : "black";
+    if(clocks[turn]>0) clocks[turn]--;
     whiteClockEl.textContent = fmt(clocks.white);
     blackClockEl.textContent = fmt(clocks.black);
     checkTimeEnd();
@@ -187,45 +197,46 @@ setInterval(()=>{
 
 socket.emit("join",{room:room_id});
 
-socket.on("player",d=>{
-    playerColor=d.color;
-    info.textContent="Du bist "+playerColor;
-    if(d.time) clocks=d.time;
+socket.on("player", d => {
+    playerColor = d.color;
+    info.textContent = "Du bist " + playerColor;
+    if(d.time) clocks = d.time;
     draw();
 });
 
-socket.on("move",d=>{
-    if(d.promotion) state[d.to]=d.promotion;
-    else {
-        state[d.to]=state[d.from];
-        delete state[d.from];
+socket.on("move", d => {
+    if (d.promotion) {
+        state[d.to] = d.promotion;
+    } else {
+        state[d.to] = state[d.from];
     }
+    delete state[d.from];
 
-    lastMove=d.last_move;
-    currentTurn = d.next_turn; // WICHTIG: neue Zugfarbe setzen
-    turnDisplay.textContent="Am Zug: "+d.next_turn;
+    lastMove = d.last_move;
+    turnDisplay.textContent = "Am Zug: " + d.next_turn;
 
-    if(d.time) clocks=d.time;
+    if(d.time) clocks = d.time;
+
     moveSound.currentTime = 0;
     moveSound.play();
 
     draw();
 });
 
-socket.on("chat",m=>{
-    chatlog.innerHTML+=m+"<br>";
-    chatlog.scrollTop=chatlog.scrollHeight;
+socket.on("chat", m => {
+    chatlog.innerHTML += m + "<br>";
+    chatlog.scrollTop = chatlog.scrollHeight;
 });
 
-socket.on("full",()=>info.textContent="Spiel ist voll!");
+socket.on("full", () => info.textContent = "Spiel ist voll!");
 
 draw();
 </script>
+
 <script>
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/service-worker.js");
   }
 </script>
-
 </body>
 </html>
