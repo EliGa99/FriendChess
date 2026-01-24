@@ -114,10 +114,30 @@ function draw(){
     }
 }
 
+// ✅ Koordinaten-FIX
+function convertClientPosToUCI(pos) {
+    let x = parseInt(pos[0]);
+    let y = parseInt(pos[1]);
+
+    if (playerColor === "black") {
+        x = 7 - x;
+        y = 7 - y;
+    }
+
+    const file = String.fromCharCode("a".charCodeAt(0) + x);
+    const rank = (y + 1).toString();
+
+    return file + rank;
+}
+
 function clickSquare(pos){
     if(!playerColor || gameEnded) return;
     if(selected){
-        socket.emit("move",{from:selected,to:pos,room:room_id});
+        socket.emit("move",{
+            from: convertClientPosToUCI(selected),
+            to: convertClientPosToUCI(pos),
+            room: room_id
+        });
         selected=null;
     } else if(state[pos]) selected=pos;
     draw();
@@ -194,3 +214,4 @@ draw();
 
 </body>
 </html>
+
