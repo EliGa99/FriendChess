@@ -114,18 +114,21 @@ function draw(){
     }
 }
 
-// ✅ Koordinaten-FIX
+/* ✅ EINZIGER FIX – korrektes UCI-Mapping */
 function convertClientPosToUCI(pos) {
     let x = parseInt(pos[0]);
     let y = parseInt(pos[1]);
 
+    // Y-Achse immer spiegeln (Board → UCI)
+    y = 7 - y;
+
+    // X-Achse nur für schwarze Sicht spiegeln
     if (playerColor === "black") {
         x = 7 - x;
-        y = 7 - y;
     }
 
-    const file = String.fromCharCode("a".charCodeAt(0) + x);
-    const rank = (y + 1).toString();
+    const file = String.fromCharCode(97 + x); // a-h
+    const rank = (y + 1).toString();          // 1-8
 
     return file + rank;
 }
@@ -206,12 +209,12 @@ socket.on("full",()=>info.textContent="Spiel ist voll!");
 
 draw();
 </script>
+
 <script>
-  if ("serviceWorker" in navigator) {
+if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/service-worker.js");
-  }
+}
 </script>
 
 </body>
 </html>
-
