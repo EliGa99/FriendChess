@@ -78,13 +78,21 @@ const pieces = [
  ["♜","♞","♝","♛","♚","♝","♞","♜"]
 ];
 
+// ------------- NEU: STATE ALS UCI -------------
 function initBoard(){
-    for(let y=0;y<8;y++)
-        for(let x=0;x<8;x++)
-            if(pieces[y][x]) state[`${x}${y}`] = pieces[y][x];
+    for(let y=0;y<8;y++){
+        for(let x=0;x<8;x++){
+            if(pieces[y][x]){
+                const file = String.fromCharCode(97 + x);   // a-h
+                const rank = (8 - y).toString();            // 8-1
+                state[file + rank] = pieces[y][x];
+            }
+        }
+    }
 }
 initBoard();
 
+// ------------- BOARD ZEICHNEN (mit Rotation) -------------
 function draw(){
     if(gameEnded) return;
     boardDiv.innerHTML="";
@@ -94,9 +102,13 @@ function draw(){
 
     for(let y of yRange){
         for(let x of xRange){
-            const key = `${x}${y}`;
+            const file = String.fromCharCode(97 + x);
+            const rank = (8 - y).toString();
+            const key = file + rank;
+
             const sq = document.createElement("div");
             sq.className = "square " + ((x+y)%2 ? "black":"white");
+
             if(key===selected) sq.classList.add("selected");
             if(lastMove && (key===lastMove.from || key===lastMove.to)) sq.classList.add("highlight");
 
@@ -114,33 +126,17 @@ function draw(){
     }
 }
 
-/* ✅ EINZIGER FIX: korrekte UCI-Umrechnung */
-function convertClientPosToUCI(pos) {
-    let x = parseInt(pos[0]);
-    let y = parseInt(pos[1]);
-
-    y = 7 - y; // Y-Achse immer spiegeln
-
-    if (playerColor === "black") {
-        x = 7 - x;
-    }
-
-    const file = String.fromCharCode(97 + x);
-    const rank = (y + 1).toString();
-
-    return file + rank;
-}
-
-function clickSquare(pos){
+// ------------- KLICK → UCI (Korrekt!) -------------
+function clickSquare(key){
     if(!playerColor || gameEnded) return;
     if(selected){
         socket.emit("move",{
-            from: convertClientPosToUCI(selected),
-            to: convertClientPosToUCI(pos),
+            from: selected,
+            to: key,
             room: room_id
         });
         selected=null;
-    } else if(state[pos]) selected=pos;
+    } else if(state[key]) selected=key;
     draw();
 }
 
@@ -154,7 +150,17 @@ function sendChat(){
 
 function fmt(t){ return `${Math.floor(t/60).toString().padStart(2,"0")}:${(t%60).toString().padStart(2,"0")}`; }
 
-
+function checkTimeEnd(){
+    if(gameEnded) return;
+    if(clocks.white <=0){
+        gameEnded = true;
+        alert("Schwarz gewinnt! Zeit von Weiß abgelaufen.");
+    }
+    if(clocks.black <=0){
+        gameEnded = true;
+        alert("Weiß gewinnt! Zeit von Schwarz abgelaufen.");
+    }
+}
 
 setInterval(()=>{
     if(!playerColor || gameEnded) return;
@@ -206,8 +212,6 @@ if ("serviceWorker" in navigator) {
 
 </body>
 </html>
-
-</script>
 
 </body>
 </html>
