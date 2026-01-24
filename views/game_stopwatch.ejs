@@ -49,6 +49,7 @@ body { background:#222; color:white; font-family:sans-serif; text-align:center; 
 
 <script>
 const socket = io();
+const moveSound = new Audio("/sounds/ficha-de-ajedrez-34722.mp3");
 const boardDiv = document.getElementById("board");
 const chatlog = document.getElementById("chatlog");
 const info = document.getElementById("info");
@@ -173,6 +174,9 @@ socket.on("move", d=>{
     turnDisplay.textContent = "Am Zug: " + d.next_turn;
 
     if(d.time && d.time.white>0) clocks = {...d.time};
+
+    moveSound.currentTime = 0;
+    moveSound.play();
 
     draw();
 });
