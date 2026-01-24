@@ -76,13 +76,13 @@ initBoard();
 function draw(){
     boardDiv.innerHTML="";
 
-    const yRange = playerColor==="black"
-        ? [...Array(8).keys()]
-        : [...Array(8).keys()].reverse();
+    const yRange = playerColor === "black"
+        ? [0,1,2,3,4,5,6,7]
+        : [7,6,5,4,3,2,1,0];
 
-    const xRange = playerColor==="black"
-        ? [...Array(8).keys()].reverse()
-        : [...Array(8).keys()];
+    const xRange = playerColor === "black"
+        ? [7,6,5,4,3,2,1,0]
+        : [0,1,2,3,4,5,6,7];
 
     for(let y of yRange){
         for(let x of xRange){
@@ -110,7 +110,7 @@ function draw(){
     }
 }
 
-// ✅ NEUE FUNKTION – einzige Änderung
+// Koordinaten → UCI (immer aus Brettsicht, unabhängig von Farbe)
 function convertClientPosToUCI(pos) {
     pos = String(pos).trim();
     if (pos.length !== 2) return null;
@@ -121,14 +121,8 @@ function convertClientPosToUCI(pos) {
     if (Number.isNaN(x) || Number.isNaN(y)) return null;
     if (x < 0 || x > 7 || y < 0 || y > 7) return null;
 
-    y = 7 - y;
-
-    if (playerColor === "black") {
-        x = 7 - x;
-    }
-
     const file = String.fromCharCode("a".charCodeAt(0) + x);
-    const rank = (y + 1).toString();
+    const rank = (8 - y).toString(); // y=0 (oben) → 8, y=7 (unten) → 1
 
     return file + rank;
 }
