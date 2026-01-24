@@ -32,7 +32,6 @@ function safeMove(board, moveData) {
     try {
         return board.move(moveData);
     } catch (err) {
-        console.warn("⚠️ Illegaler / kaputter Zug abgefangen:", moveData);
         return null;
     }
 }
@@ -191,7 +190,6 @@ io.on("connection", (socket) => {
             to: uci_to,
             promotion: promo || undefined
         });
-
         // ❌ illegaler Zug → einfach ignorieren
         if (!move) return;
 
