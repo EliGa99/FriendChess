@@ -20,12 +20,6 @@ let games = {};
 // -----------------------------
 // Hilfsfunktionen
 // -----------------------------
-function xy_to_uci(pos) {
-    const x = parseInt(pos[0]);
-    const y = parseInt(pos[1]);
-    return String.fromCharCode("a".charCodeAt(0) + x) + (y + 1);
-}
-
 function mode_time(mode) {
     if (mode === "blitz") return 5 * 60;
     if (mode === "rapid") return 10 * 60;
@@ -46,7 +40,6 @@ app.get("/", (req, res) => {
 app.get("/how-it-works", (req, res) => {
     res.render("howFriendChessWorks");
 });
-
 
 app.get("/create/:mode", (req, res) => {
     const mode = req.params.mode;
@@ -153,65 +146,50 @@ io.on("connection", (socket) => {
         const game = games[room_id];
         if (!game) return;
 
-           const board = game.board;
-           const color = game.players[socket.id];
+        const board = game.board;
+        const color = game.players[socket.id];
 
-    // Falscher Spieler am Zug
-       if ((board.turn() === "w" && color !== "white") ||
-           (board.turn() === "b" && color !== "black")) {
-           return;
-       }
+        // Falscher Spieler am Zug
+        if ((board.turn() === "w" && color !== "white") ||
+            (board.turn() === "b" && color !== "black")) {
+            return;
+        }
 
-    // Zeit aktualisieren
-       if (game.time) {
-          const now = Date.now();
-          const elapsed = Math.floor((now - game.last_move_time) / 1000);
-          game.time[color] -= elapsed;
-          game.last_move_time = now;
-    }
+        // Zeit aktualisieren
+        if (game.time) {
+            const now = Date.now();
+            const elapsed = Math.floor((now - game.last_move_time) / 1000);
+            game.time[color] -= elapsed;
+            game.last_move_time = now;
+        }
 
-    // Client sendet jetzt DIREKT UCI wie "e2", "e4"
-       const uci_from = data.from;
-       const uci_to   = data.to;
+        const uci_from = data.from;
+        const uci_to = data.to;
 
-      let promo = "";
-      const piece = board.get(uci_from);
+        let promo = "";
+        const piece = board.get(uci_from);
 
-      if (piece && piece.type === "p") {
-          if ((piece.color === "w" && uci_to[1] === "8") ||
-              (piece.color === "b" && uci_to[1] === "1")) {
-              promo = "q";
-          }
-      }
+        if (piece && piece.type === "p") {
+            if ((piece.color === "w" && uci_to[1] === "8") ||
+                (piece.color === "b" && uci_to[1] === "1")) {
+                promo = "q";
+            }
+        }
 
-      const move = board.move({
-          from: uci_from,
-          to: uci_to,
-          promotion: promo || undefined
-      });
-
-    if (move) {
-        const next_turn = board.turn() === "w" ? "white" : "black";
-
-        io.to(room_id).emit("move", {
+        const move = board.move({
             from: uci_from,
             to: uci_to,
-            next_turn,
-            last_move: { from: uci_from, to: uci_to },
-            time: game.time
+            promotion: promo || undefined
         });
-    }
-});
-
 
         if (move) {
             const next_turn = board.turn() === "w" ? "white" : "black";
 
             io.to(room_id).emit("move", {
-                from: data.from,
-                to: data.to,
+                from: uci_from,
+                to: uci_to,
                 next_turn,
-                last_move: { from: data.from, to: data.to },
+                last_move: { from: uci_from, to: uci_to },
                 time: game.time
             });
         }
@@ -231,9 +209,10 @@ io.on("connection", (socket) => {
 });
 
 // -----------------------------
-// Server Start (Render‑ready!)
+// Server Start
 // -----------------------------
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, "0.0.0.0", () => {
     console.log("Server läuft auf Port", PORT);
 });
+
