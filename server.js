@@ -27,6 +27,16 @@ function mode_time(mode) {
     return null;
 }
 
+/* 🔒 NEU: sichere Move-Funktion (verhindert Server-Crash) */
+function safeMove(board, moveData) {
+    try {
+        return board.move(moveData);
+    } catch (err) {
+        console.warn("⚠️ Illegaler / kaputter Zug abgefangen:", moveData);
+        return null;
+    }
+}
+
 // -----------------------------
 // Routes
 // -----------------------------
@@ -53,7 +63,9 @@ app.get("/create/:mode", (req, res) => {
         time: start_time ? { white: start_time, black: start_time } : null,
         last_move_time: Date.now()
     };
+
     console.log("🟢 Room erstellt:", room_id, "Mode:", mode);
+
     const game_link = `${req.protocol}://${req.get("host")}/game/${room_id}`;
 
     res.render("index", {
@@ -64,11 +76,9 @@ app.get("/create/:mode", (req, res) => {
 
 app.get("/game/:room_id", (req, res) => {
     const room_id = req.params.room_id;
-
     if (!games[room_id]) return res.render("game_not_found", { room_id });
 
     const mode = games[room_id].mode;
-
     const templates = {
         normal: "game",
         blitz: "game_blitz",
@@ -81,12 +91,10 @@ app.get("/game/:room_id", (req, res) => {
 
 app.get("/game", (req, res) => {
     const room_id = req.query.room;
-
     if (!room_id) return res.redirect("/");
     if (!games[room_id]) return res.render("game_not_found", { room_id });
 
     const mode = games[room_id].mode;
-
     const templates = {
         normal: "game",
         blitz: "game_blitz",
@@ -105,6 +113,7 @@ io.on("connection", (socket) => {
     socket.on("join", (data) => {
         const room_id = data.room;
         const game = games[room_id];
+
         console.log("👤 Spieler beigetreten:", socket.id, "in Room", room_id);
         socket.join(room_id);
 
@@ -149,13 +158,13 @@ io.on("connection", (socket) => {
         const board = game.board;
         const color = game.players[socket.id];
 
-        // Falscher Spieler am Zug
+        // ❌ falscher Spieler am Zug
         if ((board.turn() === "w" && color !== "white") ||
             (board.turn() === "b" && color !== "black")) {
             return;
         }
 
-        // Zeit aktualisieren
+        // ⏱ Zeit aktualisieren
         if (game.time) {
             const now = Date.now();
             const elapsed = Math.floor((now - game.last_move_time) / 1000);
@@ -176,23 +185,25 @@ io.on("connection", (socket) => {
             }
         }
 
-        const move = board.move({
+        /* 🔒 HIER DER EINZIGE FIX */
+        const move = safeMove(board, {
             from: uci_from,
             to: uci_to,
             promotion: promo || undefined
         });
 
-        if (move) {
-            const next_turn = board.turn() === "w" ? "white" : "black";
+        // ❌ illegaler Zug → einfach ignorieren
+        if (!move) return;
 
-            io.to(room_id).emit("move", {
-                from: uci_from,
-                to: uci_to,
-                next_turn,
-                last_move: { from: uci_from, to: uci_to },
-                time: game.time
-            });
-        }
+        const next_turn = board.turn() === "w" ? "white" : "black";
+
+        io.to(room_id).emit("move", {
+            from: uci_from,
+            to: uci_to,
+            next_turn,
+            last_move: { from: uci_from, to: uci_to },
+            time: game.time
+        });
     });
 
     socket.on("disconnect", () => {
