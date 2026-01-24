@@ -153,39 +153,56 @@ io.on("connection", (socket) => {
         const game = games[room_id];
         if (!game) return;
 
-        const board = game.board;
-        const color = game.players[socket.id];
+           const board = game.board;
+           const color = game.players[socket.id];
 
-        if ((board.turn() === "w" && color !== "white") ||
-            (board.turn() === "b" && color !== "black")) {
-            return;
-        }
+    // Falscher Spieler am Zug
+       if ((board.turn() === "w" && color !== "white") ||
+           (board.turn() === "b" && color !== "black")) {
+           return;
+       }
 
-        if (game.time) {
-            const now = Date.now();
-            const elapsed = Math.floor((now - game.last_move_time) / 1000);
-            game.time[color] -= elapsed;
-            game.last_move_time = now;
-        }
+    // Zeit aktualisieren
+       if (game.time) {
+          const now = Date.now();
+          const elapsed = Math.floor((now - game.last_move_time) / 1000);
+          game.time[color] -= elapsed;
+          game.last_move_time = now;
+    }
 
-        const uci_from = xy_to_uci(data.from);
-        const uci_to = xy_to_uci(data.to);
+    // Client sendet jetzt DIREKT UCI wie "e2", "e4"
+       const uci_from = data.from;
+       const uci_to   = data.to;
 
-        let promo = "";
-        const piece = board.get(uci_from);
+      let promo = "";
+      const piece = board.get(uci_from);
 
-        if (piece && piece.type === "p") {
-            if ((piece.color === "w" && uci_to[1] === "8") ||
-                (piece.color === "b" && uci_to[1] === "1")) {
-                promo = "q";
-            }
-        }
+      if (piece && piece.type === "p") {
+          if ((piece.color === "w" && uci_to[1] === "8") ||
+              (piece.color === "b" && uci_to[1] === "1")) {
+              promo = "q";
+          }
+      }
 
-        const move = board.move({
+      const move = board.move({
+          from: uci_from,
+          to: uci_to,
+          promotion: promo || undefined
+      });
+
+    if (move) {
+        const next_turn = board.turn() === "w" ? "white" : "black";
+
+        io.to(room_id).emit("move", {
             from: uci_from,
             to: uci_to,
-            promotion: promo || undefined
+            next_turn,
+            last_move: { from: uci_from, to: uci_to },
+            time: game.time
         });
+    }
+});
+
 
         if (move) {
             const next_turn = board.turn() === "w" ? "white" : "black";
